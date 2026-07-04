@@ -8,6 +8,9 @@ from ai_handler import AIHandler
 db = Database()
 ai = AIHandler()
 
+# قفل ذكي لحماية قاعدة البيانات من التداخل السريع
+db_lock = asyncio.Lock()
+
 def is_target(_, __, message: Message) -> bool:
     if not message or not message.from_user: 
         return False
@@ -23,6 +26,16 @@ def is_target(_, __, message: Message) -> bool:
     return False
 
 target_filter = filters.create(is_target)
+
+# دالة لتنفيذ عمليات الحفظ بالخلفية بالترتيب وبدون تداخل
+async def background_db_tasks(chat_id, user_id, text, response):
+    async with db_lock:
+        # نجمع كل عمليات الحفظ بدالة وحدة ونشغلها بخيط (Thread) واحد
+        def _save():
+            db.add_to_history(chat_id, "user", text)
+            db.add_to_history(chat_id, "assistant", response)
+            db.increment_stat("ai_replies_sent", user_id)
+        await asyncio.to_thread(_save)
 
 @Client.on_message(filters.text & ~filters.me & target_filter)
 async def handle_others(client: Client, message: Message):
@@ -40,28 +53,27 @@ async def handle_others(client: Client, message: Message):
     if settings.get("auto_reply", True):
         auto_response = db.get_reply(text)
         if auto_response:
-            # إرسال الرد فوراً بدون أي تأخير (انحذف الـ sleep)
             await message.reply_text(auto_response)
             
-            # تسجيل الإحصائيات بالخلفية حتى ما يبطئ البوت
-            asyncio.create_task(asyncio.to_thread(db.increment_stat, "auto_replies_sent", user_id))
+            # تحديث الإحصائيات بأمان بالخلفية
+            async def update_stats():
+                async with db_lock:
+                    await asyncio.to_thread(db.increment_stat, "auto_replies_sent", user_id)
+            asyncio.create_task(update_stats())
             return  
             
     # 2. الذكاء الاصطناعي السريع
     if settings.get("ai_reply", True):
-        # رسالة مؤقتة سريعة جداً
         processing_msg = await message.reply_text("🤖 ...") 
         try:
-            # جلب الرد من الذكاء الاصطناعي
-            history = await asyncio.to_thread(db.get_chat_history, chat_id)
+            # جلب التاريخ بأمان
+            async with db_lock:
+                history = await asyncio.to_thread(db.get_chat_history, chat_id)
+                
             response = await ai.get_response(text, history)
-            
-            # تعديل الرسالة وعرض النتيجة فوراً
             await processing_msg.edit_text(f"🤖 {response}")
             
-            # حفظ السجل بالخلفية (Background Tasks)
-            asyncio.create_task(asyncio.to_thread(db.add_to_history, chat_id, "user", text))
-            asyncio.create_task(asyncio.to_thread(db.add_to_history, chat_id, "assistant", response))
-            asyncio.create_task(asyncio.to_thread(db.increment_stat, "ai_replies_sent", user_id))
+            # استدعاء دالة الحفظ المنظمة بالخلفية
+            asyncio.create_task(background_db_tasks(chat_id, user_id, text, response))
         except Exception as e:
             await processing_msg.edit_text("❌ حدث خطأ في الاتصال.")
