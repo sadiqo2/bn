@@ -10,7 +10,7 @@ class Config:
 
     # AI API Keys
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Kc6FuS-RpY7-PXLQt_W4cfJPPcWtfn-r_MzlISNULwuQ")
-    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
+    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "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")
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
     # إعدادات البوت
