@@ -7,17 +7,17 @@ from config import Config
 
 class Database:
     def __init__(self):
-        # التحقق من وجود مسار التخزين الدائم الخاص بـ Railway
-        db_dir = "/app/data"
-        if not os.path.exists(db_dir):
-            os.makedirs(db_dir, exist_ok=True)
-            
-        db_path = os.path.join(db_dir, "bot_database.db")
+        # بدال ما نعتمد على /app/data اللي يحتاج Volume،
+        # راح نخليه يخزن بـ /app/ مباشرة (هذا المسار Railway تعتبره Root)
+        # الملف راح يكون اسمه bot_database.db
+        db_path = "/app/bot_database.db"
         
-        # الاتصال بقاعدة البيانات الدائمة
         self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
         self._create_tables()
+    
+    # ... (باقي الكود مثل ما هو)
+
         
     # ... (باقي كود قاعدة البيانات مثل ما هو بدون تغيير)
 
