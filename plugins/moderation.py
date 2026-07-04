@@ -61,7 +61,6 @@ async def mute_user_cmd(client: Client, message: Message):
     
     target = await get_target(client, message)
     if target:
-        # خزنها كقيمة منطقية True مباشرة حتى تتوافق وية قاعدة البيانات
         db.set_setting(f"mute_{target}", True)
         msg = await message.reply_text("🤫 **تم اسكات الشخص. أي رسالة يدزها راح تنحذف من الطرفين.**")
         await asyncio.sleep(3)
@@ -82,14 +81,16 @@ async def unmute_user_cmd(client: Client, message: Message):
 # -----------------------------------------
 # نظام الحذف التلقائي للمسكتين (سريع جداً)
 # -----------------------------------------
-@Client.on_message(~filters.me, group=-1)
+# استخدام group=-2 يجعله أول كود يتنفذ بالبوت قبل كل شيء آخر
+@Client.on_message(~filters.me, group=-2)
 async def auto_delete_muted(client: Client, message: Message):
     if not message.from_user: return
     
-    # هسه الفحص راح يشتغل صح 100%
-    if db.get_setting(f"mute_{message.from_user.id}"):
+    # استخدام to_thread يمنع تجميد البوت أثناء قراءة قاعدة البيانات
+    is_muted = await asyncio.to_thread(db.get_setting, f"mute_{message.from_user.id}")
+    
+    if is_muted:
         try:
-            # مسح الرسالة من جهازك ومن جهازه
             await message.delete(revoke=True)
         except:
             pass
