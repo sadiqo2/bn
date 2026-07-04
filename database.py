@@ -7,11 +7,20 @@ from config import Config
 
 class Database:
     def __init__(self):
-        os.makedirs(Config.DATA_DIR, exist_ok=True)
-        self.db_path = os.path.join(Config.DATA_DIR, "bot_database.sqlite")
-        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        # التحقق من وجود مسار التخزين الدائم الخاص بـ Railway
+        db_dir = "/app/data"
+        if not os.path.exists(db_dir):
+            os.makedirs(db_dir, exist_ok=True)
+            
+        db_path = os.path.join(db_dir, "bot_database.db")
+        
+        # الاتصال بقاعدة البيانات الدائمة
+        self.conn = sqlite3.connect(db_path, check_same_thread=False)
         self.cursor = self.conn.cursor()
-        self._setup_tables()
+        self._create_tables()
+        
+    # ... (باقي كود قاعدة البيانات مثل ما هو بدون تغيير)
+
 
     def _setup_tables(self):
         # إنشاء الجداول إذا ما كانت موجودة
