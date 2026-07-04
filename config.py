@@ -9,7 +9,7 @@ class Config:
     API_HASH = os.getenv("API_HASH", "2e6bf629432f1dd91a06d77342482218")
 
     # AI API Keys
-    GEMINI_API_KEY = os.getenv("AQ.Ab8RN6LXAv4GFB0bSc5R3qOM_n4UfviEkRrNuOO4gvz-PuGM0A", "")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Kc6FuS-RpY7-PXLQt_W4cfJPPcWtfn-r_MzlISNULwuQ")
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
