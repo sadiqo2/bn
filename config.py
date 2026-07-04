@@ -10,6 +10,7 @@ class Config:
 
     # AI API Keys
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Kc6FuS-RpY7-PXLQt_W4cfJPPcWtfn-r_MzlISNULwuQ")
+    # خلي مفتاح Groq الخاص بيك بين علامتي التنصيص الجوه بمكان النص العربي
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "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")
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
@@ -19,8 +20,8 @@ class Config:
 
     # إعدادات الذكاء الاصطناعي
     AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
-    AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini")
-    AI_MODEL = os.getenv("AI_MODEL", "gemini-2.0-flash")
+    AI_PROVIDER = os.getenv("AI_PROVIDER", "groq") # تم التغيير إلى groq
+    AI_MODEL = os.getenv("AI_MODEL", "llama3-8b-8192") # نموذج متوافق مع groq ومجاني وسريع
 
     # إعدادات الردود
     AUTO_REPLY_ENABLED = True
