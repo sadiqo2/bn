@@ -1,3 +1,4 @@
+import sqlite3
 import json
 import os
 from datetime import datetime
@@ -7,152 +8,100 @@ from config import Config
 class Database:
     def __init__(self):
         os.makedirs(Config.DATA_DIR, exist_ok=True)
-        self.replies_file = os.path.join(Config.DATA_DIR, "auto_replies.json")
-        self.stats_file = os.path.join(Config.DATA_DIR, "stats.json")
-        self.history_file = os.path.join(Config.DATA_DIR, "chat_history.json")
-        self.settings_file = os.path.join(Config.DATA_DIR, "settings.json")
+        self.db_path = os.path.join(Config.DATA_DIR, "bot_database.sqlite")
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
+        self.cursor = self.conn.cursor()
+        self._setup_tables()
+
+    def _setup_tables(self):
+        # إنشاء الجداول إذا ما كانت موجودة
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS auto_replies (keyword TEXT PRIMARY KEY, response TEXT)''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS stats (stat_name TEXT PRIMARY KEY, count INTEGER)''')
+        self.cursor.execute('''CREATE TABLE IF NOT EXISTS chat_history (chat_id TEXT, role TEXT, content TEXT, timestamp TEXT)''')
+        self.conn.commit()
         
-        self.replies = self._load_json(self.replies_file, {})
-        self.stats = self._load_json(self.stats_file, self._default_stats())
-        self.history = self._load_json(self.history_file, {})
-        self.settings = self._load_json(self.settings_file, self._default_settings())
-        
-        # Ensure all keys exist
-        self._ensure_stats()
-    
-    def _load_json(self, filepath: str, default: dict) -> dict:
-        if os.path.exists(filepath):
-            with open(filepath, 'r', encoding='utf-8') as f:
-                return json.load(f)
-        return default
-    
-    def _save_json(self, filepath: str, data: dict):
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, ensure_ascii=False, indent=2)
-    
-    def _default_stats(self) -> dict:
-        return {
-            "total_messages": 0,
-            "auto_replies_sent": 0,
-            "ai_replies_sent": 0,
-            "groups_handled": 0,
-            "private_chats": 0,
-            "start_time": datetime.now().isoformat(),
-            "daily_stats": {},
-            "top_keywords": {},
-            "user_stats": {}
+        # الإعدادات الافتراضية
+        default_settings = {
+            "auto_reply": "true", "ai_reply": "true", 
+            "reply_to_all": "false", "language": "ar"
         }
-    
-    def _ensure_stats(self):
-        """Ensure all required keys exist in stats"""
-        required_keys = [
-            "total_messages", "auto_replies_sent", "ai_replies_sent",
-            "groups_handled", "private_chats", "daily_stats",
-            "top_keywords", "user_stats", "start_time"
+        for k, v in default_settings.items():
+            self.cursor.execute("INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)", (k, v))
+        
+        default_stats = [
+            "total_messages", "auto_replies_sent", "ai_replies_sent", 
+            "groups_handled", "private_chats"
         ]
-        for key in required_keys:
-            if key not in self.stats:
-                if key in ["daily_stats", "top_keywords", "user_stats"]:
-                    self.stats[key] = {}
-                elif key == "start_time":
-                    self.stats[key] = datetime.now().isoformat()
-                else:
-                    self.stats[key] = 0
-        self._save_json(self.stats_file, self.stats)
-    
-    def _default_settings(self) -> dict:
-        return {
-            "auto_reply": True,
-            "ai_reply": True,
-            "reply_to_all": False,
-            "welcome_message": "👋 مرحباً! كيف يمكنني مساعدتك؟",
-            "blocked_keywords": [],
-            "allowed_groups": [],
-            "language": "ar"
-        }
-    
-    def add_reply(self, keyword: str, response: str) -> bool:
-        self.replies[keyword.lower()] = response
-        self._save_json(self.replies_file, self.replies)
-        return True
-    
-    def remove_reply(self, keyword: str) -> bool:
-        if keyword.lower() in self.replies:
-            del self.replies[keyword.lower()]
-            self._save_json(self.replies_file, self.replies)
-            return True
-        return False
-    
-    def get_reply(self, text: str) -> Optional[str]:
-        text_lower = text.lower()
-        for keyword, response in self.replies.items():
-            if keyword in text_lower:
-                return response
-        return None
-    
-    def get_all_replies(self) -> Dict[str, str]:
-        return self.replies.copy()
-    
-    def increment_stat(self, stat_name: str, user_id: int = None):
-        # Ensure all required keys exist
-        if "daily_stats" not in self.stats:
-            self.stats["daily_stats"] = {}
-        if "user_stats" not in self.stats:
-            self.stats["user_stats"] = {}
-        if "total_messages" not in self.stats:
-            self.stats["total_messages"] = 0
-        if "auto_replies_sent" not in self.stats:
-            self.stats["auto_replies_sent"] = 0
-        if "ai_replies_sent" not in self.stats:
-            self.stats["ai_replies_sent"] = 0
-        if "groups_handled" not in self.stats:
-            self.stats["groups_handled"] = 0
-        if "private_chats" not in self.stats:
-            self.stats["private_chats"] = 0
-        
-        self.stats[stat_name] = self.stats.get(stat_name, 0) + 1
-        
-        # إحصائيات يومية
-        today = datetime.now().strftime("%Y-%m-%d")
-        if today not in self.stats.get("daily_stats", {}):
-            self.stats["daily_stats"][today] = {"messages": 0, "replies": 0}
-        self.stats["daily_stats"][today]["messages"] += 1
-        
-        # إحصائيات المستخدم
-        if user_id:
-            uid = str(user_id)
-            if uid not in self.stats.get("user_stats", {}):
-                self.stats["user_stats"][uid] = {"messages": 0, "last_seen": ""}
-            self.stats["user_stats"][uid]["messages"] += 1
-            self.stats["user_stats"][uid]["last_seen"] = datetime.now().isoformat()
-        
-        self._save_json(self.stats_file, self.stats)
-    
-    def get_stats(self) -> dict:
-        return self.stats.copy()
-    
+        for stat in default_stats:
+            self.cursor.execute("INSERT OR IGNORE INTO stats (stat_name, count) VALUES (?, 0)", (stat,))
+            
+        self.cursor.execute("INSERT OR IGNORE INTO stats (stat_name, count) VALUES ('start_time', ?)", (datetime.now().isoformat(),))
+        self.conn.commit()
+
+    # --- دوال الإعدادات ---
     def get_setting(self, key: str):
-        return self.settings.get(key)
-    
+        self.cursor.execute("SELECT value FROM settings WHERE key = ?", (key,))
+        result = self.cursor.fetchone()
+        if result:
+            val = result[0]
+            if val == "true": return True
+            if val == "false": return False
+            return val
+        return None
+
     def set_setting(self, key: str, value):
-        self.settings[key] = value
-        self._save_json(self.settings_file, self.settings)
-    
+        val_str = "true" if value is True else "false" if value is False else str(value)
+        self.cursor.execute("REPLACE INTO settings (key, value) VALUES (?, ?)", (key, val_str))
+        self.conn.commit()
+
     def get_all_settings(self) -> dict:
-        return self.settings.copy()
-    
+        self.cursor.execute("SELECT key, value FROM settings")
+        return {row[0]: (True if row[1]=="true" else False if row[1]=="false" else row[1]) for row in self.cursor.fetchall()}
+
+    # --- دوال الردود ---
+    def add_reply(self, keyword: str, response: str) -> bool:
+        self.cursor.execute("REPLACE INTO auto_replies (keyword, response) VALUES (?, ?)", (keyword.lower(), response))
+        self.conn.commit()
+        return True
+
+    def remove_reply(self, keyword: str) -> bool:
+        self.cursor.execute("DELETE FROM auto_replies WHERE keyword = ?", (keyword.lower(),))
+        self.conn.commit()
+        return self.cursor.rowcount > 0
+
+    def get_reply(self, text: str) -> Optional[str]:
+        self.cursor.execute("SELECT response FROM auto_replies WHERE ? LIKE '%' || keyword || '%'", (text.lower(),))
+        result = self.cursor.fetchone()
+        return result[0] if result else None
+
+    def get_all_replies(self) -> Dict[str, str]:
+        self.cursor.execute("SELECT keyword, response FROM auto_replies")
+        return {row[0]: row[1] for row in self.cursor.fetchall()}
+
+    # --- دوال الإحصائيات ---
+    def increment_stat(self, stat_name: str, user_id: int = None):
+        self.cursor.execute("UPDATE stats SET count = count + 1 WHERE stat_name = ?", (stat_name,))
+        self.conn.commit()
+
+    def get_stats(self) -> dict:
+        self.cursor.execute("SELECT stat_name, count FROM stats")
+        stats_dict = {row[0]: row[1] for row in self.cursor.fetchall()}
+        return stats_dict
+
+    # --- دوال سجل المحادثات للذكاء الاصطناعي ---
     def add_to_history(self, chat_id: int, role: str, content: str):
         cid = str(chat_id)
-        if cid not in self.history:
-            self.history[cid] = []
-        self.history[cid].append({
-            "role": role,
-            "content": content,
-            "timestamp": datetime.now().isoformat()
-        })
-        self.history[cid] = self.history[cid][-50:]
-        self._save_json(self.history_file, self.history)
-    
+        self.cursor.execute("INSERT INTO chat_history (chat_id, role, content, timestamp) VALUES (?, ?, ?, ?)", 
+                            (cid, role, content, datetime.now().isoformat()))
+        # الحفاظ على آخر 50 رسالة فقط لكل محادثة
+        self.cursor.execute("""
+            DELETE FROM chat_history WHERE rowid NOT IN (
+                SELECT rowid FROM chat_history WHERE chat_id = ? ORDER BY timestamp DESC LIMIT 50
+            ) AND chat_id = ?
+        """, (cid, cid))
+        self.conn.commit()
+
     def get_chat_history(self, chat_id: int, limit: int = 10) -> List[dict]:
-        cid = str(chat_id)
-        return self.history.get(cid, [])[-limit:]
+        self.cursor.execute("SELECT role, content FROM chat_history WHERE chat_id = ? ORDER BY timestamp ASC LIMIT ?", (str(chat_id), limit))
+        return [{"role": row[0], "content": row[1]} for row in self.cursor.fetchall()]
