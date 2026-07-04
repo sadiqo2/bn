@@ -8,6 +8,12 @@ from database import Database
 db = Database()
 start_time = time.time()
 
+def get_readable_time(seconds: int) -> str:
+    m, s = divmod(seconds, 60)
+    h, m = divmod(m, 60)
+    d, h = divmod(h, 24)
+    return f"{d} يوم و {h} ساعة"
+
 # -----------------------------------------
 # قائمة الأوامر الشاملة (/help)
 # -----------------------------------------
@@ -23,7 +29,7 @@ async def help_command(client: Client, message: Message):
 *(بالرد على الشخص أو ذكره @ أو بالخاص)*
 • `حظر` / `بلوك` : حظر المستخدم.
 • `فك حظر` / `فك البلوك` : إلغاء الحظر.
-• `اسكات` / `ميوت` : كتم الشخص (تنحذف رسائله من الطرفين فوراً).
+• `اسكات` / `ميوت` : كتم الشخص (تنحذف رسائله فوراً).
 • `الغاء الاسكات` / `انميوت` : فك الكتم.
 
 🎨 **أوامر الملصقات (بدون /)**
@@ -41,53 +47,48 @@ async def help_command(client: Client, message: Message):
 • `/list_replies` : عرض جميع الردود.
 
 ⚙️ **النظام والإحصائيات (مع /)**
-• `/stats` : عرض إحصائيات البوت واستهلاك السيرفر.
+• `/sys` أو `/allstats` : عرض إحصائيات النظام الشاملة واستهلاك السيرفر.
 • `/help` : عرض هذه القائمة.
 """
     await client.send_message("me", help_text)
 
 # -----------------------------------------
-# الإحصائيات الشاملة واستخدام النظام (/stats)
+# الإحصائيات الشاملة المحدثة بـأمر جديد (/sys)
 # -----------------------------------------
-def get_readable_time(seconds: int) -> str:
-    m, s = divmod(seconds, 60)
-    h, m = divmod(m, 60)
-    d, h = divmod(h, 24)
-    return f"{d}يوم {h}ساعة {m}دقيقة"
-
-@Client.on_message(filters.command("stats", prefixes="/") & filters.me)
+@Client.on_message(filters.command(["sys", "allstats"], prefixes="/") & filters.me)
 async def stats_command(client: Client, message: Message):
-    processing = await message.reply_text("⏳ جاري سحب الإحصائيات...")
+    processing = await message.reply_text("⏳ جاري سحب الإحصائيات الشاملة من السيرفر...")
     
-    # حساب وقت تشغيل البوت (Uptime)
+    # حساب وقت التشغيل
     uptime = int(time.time() - start_time)
     uptime_str = get_readable_time(uptime)
     
-    # استهلاك السيرفر (Railway)
-    cpu_usage = psutil.cpu_percent(interval=0.5)
-    ram = psutil.virtual_memory()
-    ram_usage = ram.percent
-    ram_used_mb = ram.used / (1024 * 1024)
-    ram_total_mb = ram.total / (1024 * 1024)
+    # استهلاك السيرفر (مع حماية كاملة)
+    try:
+        cpu_usage = psutil.cpu_percent(interval=0.2)
+        ram = psutil.virtual_memory()
+        ram_percent = f"{ram.percent}%"
+    except Exception:
+        cpu_usage = "غير مدعوم"
+        ram_percent = "غير مدعوم"
     
-    # جلب إحصائيات قاعدة البيانات (الرسائل والردود)
-    ai_replies = db.get_setting("ai_replies_sent") or "0"
-    auto_replies = db.get_setting("auto_replies_sent") or "0"
+    # جلب الإحصائيات من الداتا بيس
+    ai_replies = db.get_stat("ai_replies_sent")
+    auto_replies = db.get_stat("auto_replies_sent")
     
     stats_text = f"""
 📊 **إحصائيات النظام الشاملة** 📊
 
-⏱ **وقت التشغيل (Uptime):** `{uptime_str}`
+⏱ **وقت تشغيل البوت:** `{uptime_str}`
 
-💻 **استهلاك السيرفر (Railway):**
-• **المعالج (CPU):** `{cpu_usage}%` 🎛
-• **الذاكرة (RAM):** `{ram_usage}%` 🧠
-• **المستخدم:** `{ram_used_mb:.1f} MB` من `{ram_total_mb:.1f} MB`
+💻 **أداء سيرفر Railway:**
+• **استهلاك المعالج (CPU):** `{cpu_usage}%`
+• **استهلاك الذاكرة (RAM):** `{ram_percent}`
 
-🤖 **نشاط البوت:**
+🤖 **عداد النشاط والتفاعل:**
 • **ردود الذكاء الاصطناعي:** `{ai_replies}` رسالة
 • **الردود التلقائية:** `{auto_replies}` رسالة
 
-📂 **حالة التخزين:** `مستقر (Volume Mounted) ✅`
+📂 **حالة قاعدة البيانات:** `مستقرة وجاهزة وآمنة ✅`
 """
     await processing.edit_text(stats_text)
