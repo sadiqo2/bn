@@ -28,6 +28,11 @@ target_filter = filters.create(is_target)
 # يشتغل على رسائل الآخرين فقط (~filters.me)
 @Client.on_message(filters.text & ~filters.me & target_filter)
 async def handle_others(client: Client, message: Message):
+    # 🛑 التعديل الجديد: فحص الإسكات قبل كل شيء
+    # إذا كان الشخص مسكت (Muted)، توقف فوراً ولا تكمل الكود
+    if db.get_setting(f"mute_{message.from_user.id}"):
+        return
+        
     settings = db.get_all_settings()
     
     # 1. فحص الردود التلقائية أولاً
@@ -37,7 +42,7 @@ async def handle_others(client: Client, message: Message):
             await asyncio.sleep(2)
             await message.reply_text(auto_response)
             db.increment_stat("auto_replies_sent", message.from_user.id)
-            return  # إذا لكى رد تلقائي، يوقف وما يروح للذكاء الاصطناعي
+            return  
             
     # 2. إذا ماكو رد تلقائي، يجاوب بالذكاء الاصطناعي
     if settings.get("ai_reply", True):
