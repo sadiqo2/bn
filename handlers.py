@@ -51,17 +51,23 @@ async def cmd_start(client: Client, message: Message):
 
 async def cmd_settings(client: Client, message: Message):
     settings = db.get_all_settings()
+    
+    # استخدام .get() لتجنب الأخطاء في حال كانت الإعدادات ناقصة بملف الـ JSON
+    auto_reply = settings.get('auto_reply', True)
+    ai_reply = settings.get('ai_reply', True)
+    reply_to_all = settings.get('reply_to_all', False)
+    lang = settings.get('language', 'ar')
+
     text = f"""
 ⚙️ **الإعدادات الحالية:**
 
-📝 الردود التلقائية: {'✅' if settings['auto_reply'] else '❌'} (للتغيير: /toggle_auto)
-🤖 الذكاء الاصطناعي: {'✅' if settings['ai_reply'] else '❌'} (للتغيير: /toggle_ai)
-📢 الرد على الجميع بالكروبات: {'✅' if settings['reply_to_all'] else '❌'} (للتغيير: /toggle_reply_all)
-🌐 اللغة: {settings['language']}
+📝 الردود التلقائية: {'✅' if auto_reply else '❌'} (للتغيير: /toggle_auto)
+🤖 الذكاء الاصطناعي: {'✅' if ai_reply else '❌'} (للتغيير: /toggle_ai)
+📢 الرد على الجميع بالكروبات: {'✅' if reply_to_all else '❌'} (للتغيير: /toggle_reply_all)
+🌐 اللغة: {lang}
 """
     await message.reply_text(text)
 
-# أوامر جديدة لتغيير الإعدادات بدل الأزرار الشفافة
 async def cmd_toggle_auto(client: Client, message: Message):
     current = db.get_setting("auto_reply")
     db.set_setting("auto_reply", not current)
