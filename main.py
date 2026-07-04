@@ -58,16 +58,16 @@ os.makedirs(Config.DATA_DIR, exist_ok=True)
 SESSION_STRING = os.getenv("SESSION_STRING", "").strip()
 
 print("=" * 50)
-print("🤖 Smart UserBot - بوت تلغرام الذكي")
+print("🤖 Smart UserBot - بوت تلغرام الذكي (وضع الحساب الشخصي)")
 print("=" * 50)
+
+from pyrogram import Client, filters
+from pyrogram.enums import ChatType
+from handlers import *
 
 if SESSION_STRING:
     print("🔑 Using SESSION_STRING mode")
     print(f"   Length: {len(SESSION_STRING)} chars")
-
-    from pyrogram import Client, filters
-    from pyrogram.enums import ChatType
-    from handlers import *
 
     app = Client(
         "my_account",
@@ -84,10 +84,6 @@ else:
     print("📁 Using session file mode (local)")
     print("📱 سجل دخولك باستخدام رقم هاتفك")
 
-    from pyrogram import Client, filters
-    from pyrogram.enums import ChatType
-    from handlers import *
-
     app = Client(
         name=os.path.join(Config.SESSIONS_DIR, "my_account"),
         api_id=Config.API_ID,
@@ -99,22 +95,22 @@ else:
         max_concurrent_transmissions=5
     )
 
-# Commands
-app.on_message(filters.command("start") & filters.private)(cmd_start)
-app.on_message(filters.command("settings"))(cmd_settings)
-app.on_message(filters.command("stats"))(cmd_stats)
-app.on_message(filters.command("ai"))(cmd_ai)
-app.on_message(filters.command("add_reply"))(cmd_add_reply)
-app.on_message(filters.command("remove_reply"))(cmd_remove_reply)
-app.on_message(filters.command("list_replies"))(cmd_list_replies)
-app.on_message(filters.command("help"))(cmd_help)
+# Commands (مخصصة فقط لصاحب الحساب لضمان الحماية)
+app.on_message(filters.command("start") & filters.me)(cmd_start)
+app.on_message(filters.command("settings") & filters.me)(cmd_settings)
+app.on_message(filters.command("toggle_auto") & filters.me)(cmd_toggle_auto)
+app.on_message(filters.command("toggle_ai") & filters.me)(cmd_toggle_ai)
+app.on_message(filters.command("toggle_reply_all") & filters.me)(cmd_toggle_reply_all)
+app.on_message(filters.command("stats") & filters.me)(cmd_stats)
+app.on_message(filters.command("ai") & filters.me)(cmd_ai)
+app.on_message(filters.command("add_reply") & filters.me)(cmd_add_reply)
+app.on_message(filters.command("remove_reply") & filters.me)(cmd_remove_reply)
+app.on_message(filters.command("list_replies") & filters.me)(cmd_list_replies)
+app.on_message(filters.command("help") & filters.me)(cmd_help)
 
-# Messages
+# Messages (الرد على الآخرين)
 app.on_message(filters.text & filters.private & ~filters.me)(handle_message)
 app.on_message(filters.text & filters.group & reply_filter & ~filters.me)(handle_message)
-
-# Callbacks
-app.on_callback_query()(handle_callback)
 
 if __name__ == "__main__":
     print("=" * 50)
