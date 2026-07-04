@@ -6,7 +6,7 @@ from database import Database
 
 db = Database()
 
-# دالة ذكية تجيب آيدي الشخص (من الرد، أو التاك، أو إذا بالخاص تجيب آيدي الطرف الثاني)
+# دالة ذكية تجيب آيدي الشخص
 async def get_target(client: Client, message: Message):
     if message.reply_to_message and message.reply_to_message.from_user:
         return message.reply_to_message.from_user.id
@@ -37,7 +37,7 @@ async def block_user_cmd(client: Client, message: Message):
         await client.block_user(target)
         msg = await message.reply_text("🚫 **تم حظر الشخص بنجاح.**")
         await asyncio.sleep(3)
-        await msg.delete() # الرسالة تختفي بعد 3 ثواني حتى تبقى المحادثة نظيفة
+        await msg.delete()
 
 @Client.on_message(filters.regex(r"^(فك حظر|فك البلوك)(?:\s+|$)") & filters.me)
 async def unblock_user_cmd(client: Client, message: Message):
@@ -61,7 +61,8 @@ async def mute_user_cmd(client: Client, message: Message):
     
     target = await get_target(client, message)
     if target:
-        db.set_setting(f"mute_{target}", "true")
+        # خزنها كقيمة منطقية True مباشرة حتى تتوافق وية قاعدة البيانات
+        db.set_setting(f"mute_{target}", True)
         msg = await message.reply_text("🤫 **تم اسكات الشخص. أي رسالة يدزها راح تنحذف من الطرفين.**")
         await asyncio.sleep(3)
         await msg.delete()
@@ -73,7 +74,7 @@ async def unmute_user_cmd(client: Client, message: Message):
     
     target = await get_target(client, message)
     if target:
-        db.set_setting(f"mute_{target}", "false")
+        db.set_setting(f"mute_{target}", False)
         msg = await message.reply_text("🔊 **تم الغاء الاسكات.**")
         await asyncio.sleep(3)
         await msg.delete()
@@ -81,15 +82,14 @@ async def unmute_user_cmd(client: Client, message: Message):
 # -----------------------------------------
 # نظام الحذف التلقائي للمسكتين (سريع جداً)
 # -----------------------------------------
-# group=-1 يعني هذا الفلتر يشتغل قبل كل شي بالبوت (أسرع أداء للـ Railway)
 @Client.on_message(~filters.me, group=-1)
 async def auto_delete_muted(client: Client, message: Message):
     if not message.from_user: return
     
-    user_id = message.from_user.id
-    if db.get_setting(f"mute_{user_id}") == "true":
+    # هسه الفحص راح يشتغل صح 100%
+    if db.get_setting(f"mute_{message.from_user.id}"):
         try:
-            # revoke=True تعني حذف الرسالة من عندك ومن عنده (للطرفين)
+            # مسح الرسالة من جهازك ومن جهازه
             await message.delete(revoke=True)
         except:
             pass
