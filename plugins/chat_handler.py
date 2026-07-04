@@ -8,7 +8,6 @@ from ai_handler import AIHandler
 db = Database()
 ai = AIHandler()
 
-# فلتر ذكي: يحدد إذا الرسالة بالخاص، أو رد على رسالتك، أو تاك إلك بالكروب
 def is_target(_, __, message: Message) -> bool:
     if not message or not message.from_user: 
         return False
@@ -25,34 +24,44 @@ def is_target(_, __, message: Message) -> bool:
 
 target_filter = filters.create(is_target)
 
-# يشتغل على رسائل الآخرين فقط (~filters.me)
 @Client.on_message(filters.text & ~filters.me & target_filter)
 async def handle_others(client: Client, message: Message):
-    # 🛑 التعديل الجديد: فحص الإسكات قبل كل شيء
-    # إذا كان الشخص مسكت (Muted)، توقف فوراً ولا تكمل الكود
-    if db.get_setting(f"mute_{message.from_user.id}"):
+    user_id = message.from_user.id
+    chat_id = message.chat.id
+    text = message.text
+
+    # فحص الإسكات السريع
+    if db.get_setting(f"mute_{user_id}"):
         return
         
     settings = db.get_all_settings()
     
-    # 1. فحص الردود التلقائية أولاً
+    # 1. الرد التلقائي الصاروخي
     if settings.get("auto_reply", True):
-        auto_response = db.get_reply(message.text)
+        auto_response = db.get_reply(text)
         if auto_response:
-            await asyncio.sleep(2)
+            # إرسال الرد فوراً بدون أي تأخير (انحذف الـ sleep)
             await message.reply_text(auto_response)
-            db.increment_stat("auto_replies_sent", message.from_user.id)
+            
+            # تسجيل الإحصائيات بالخلفية حتى ما يبطئ البوت
+            asyncio.create_task(asyncio.to_thread(db.increment_stat, "auto_replies_sent", user_id))
             return  
             
-    # 2. إذا ماكو رد تلقائي، يجاوب بالذكاء الاصطناعي
+    # 2. الذكاء الاصطناعي السريع
     if settings.get("ai_reply", True):
-        processing_msg = await message.reply_text("🤖 **جاري التفكير...**")
+        # رسالة مؤقتة سريعة جداً
+        processing_msg = await message.reply_text("🤖 ...") 
         try:
-            history = db.get_chat_history(message.chat.id)
-            response = await ai.get_response(message.text, history)
-            db.add_to_history(message.chat.id, "user", message.text)
-            db.add_to_history(message.chat.id, "assistant", response)
-            db.increment_stat("ai_replies_sent", message.from_user.id)
+            # جلب الرد من الذكاء الاصطناعي
+            history = await asyncio.to_thread(db.get_chat_history, chat_id)
+            response = await ai.get_response(text, history)
+            
+            # تعديل الرسالة وعرض النتيجة فوراً
             await processing_msg.edit_text(f"🤖 {response}")
+            
+            # حفظ السجل بالخلفية (Background Tasks)
+            asyncio.create_task(asyncio.to_thread(db.add_to_history, chat_id, "user", text))
+            asyncio.create_task(asyncio.to_thread(db.add_to_history, chat_id, "assistant", response))
+            asyncio.create_task(asyncio.to_thread(db.increment_stat, "ai_replies_sent", user_id))
         except Exception as e:
-            await processing_msg.edit_text(f"❌ عذراً، حدث خطأ: {str(e)[:100]}")
+            await processing_msg.edit_text("❌ حدث خطأ في الاتصال.")
