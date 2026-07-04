@@ -63,7 +63,7 @@ async def stats_command(client: Client, message: Message):
     uptime = int(time.time() - start_time)
     uptime_str = get_readable_time(uptime)
     
-    # استهلاك السيرفر (مع حماية كاملة)
+    # استهلاك السيرفر
     try:
         cpu_usage = psutil.cpu_percent(interval=0.2)
         ram = psutil.virtual_memory()
@@ -72,9 +72,21 @@ async def stats_command(client: Client, message: Message):
         cpu_usage = "غير مدعوم"
         ram_percent = "غير مدعوم"
     
-    # جلب الإحصائيات من الداتا بيس
-    ai_replies = db.get_stat("ai_replies_sent")
-    auto_replies = db.get_stat("auto_replies_sent")
+    # جلب الإحصائيات بحماية ذكية (تفحص get_stats أو get_stat أو ترجع 0)
+    try:
+        if hasattr(db, "get_stats"):
+            ai_replies = db.get_stats("ai_replies_sent") or 0
+            auto_replies = db.get_stats("auto_replies_sent") or 0
+        elif hasattr(db, "get_stat"):
+            ai_replies = db.get_stat("ai_replies_sent") or 0
+            auto_replies = db.get_stat("auto_replies_sent") or 0
+        else:
+            # حل بديل إذا الدالتين مو موجودات بقاعدة البيانات مالتك
+            ai_replies = db.get_setting("ai_replies_sent") or 0
+            auto_replies = db.get_setting("auto_replies_sent") or 0
+    except Exception:
+        ai_replies = 0
+        auto_replies = 0
     
     stats_text = f"""
 📊 **إحصائيات النظام الشاملة** 📊
