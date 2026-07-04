@@ -5,11 +5,11 @@ load_dotenv()
 
 class Config:
     # Telegram API (من my.telegram.org)
-    API_ID = int(os.getenv("API_ID", "29528386"))
-    API_HASH = os.getenv("API_HASH", "2e6bf629432f1dd91a06d77342482218")
+    API_ID = int(os.getenv("API_ID", "12345"))
+    API_HASH = os.getenv("API_HASH", "your_api_hash_here")
 
     # AI API Keys
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "AQ.Ab8RN6Kc6FuS-RpY7-PXLQt_W4cfJPPcWtfn-r_MzlISNULwuQ")
+    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
 
