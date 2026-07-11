@@ -23,7 +23,7 @@ class Config:
     # إعدادات الردود
     AUTO_REPLY_ENABLED = True
     REPLY_DELAY = 2
-    MAX_MESSAGE_LENGTH = 40Net96
+    MAX_MESSAGE_LENGTH = 4096
 
     # إعدادات الحماية
     RATE_LIMIT = 20
