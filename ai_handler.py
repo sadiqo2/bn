@@ -1,5 +1,6 @@
 import aiohttp
 import asyncio
+import socket  # تم إضافة هذه المكتبة لحل مشكلة الـ DNS
 from typing import Optional, List, Dict
 from config import Config
 
@@ -42,7 +43,10 @@ class AIHandler:
             "Content-Type": "application/json"
         }
         
-        async with aiohttp.ClientSession() as session:
+        # حلال المشاكل: إجبار aiohttp على استخدام بروتوكول IPv4 لحل خطأ الـ DNS في Railway
+        connector = aiohttp.TCPConnector(family=socket.AF_INET)
+        
+        async with aiohttp.ClientSession(connector=connector) as session:
             async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
                 data = await response.json()
                 if "choices" in data and data["choices"]:
