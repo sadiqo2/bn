@@ -15,7 +15,7 @@ class Config:
     # إعدادات الذكاء الاصطناعي (مثبت على Groq الخفيف والسريع)
     AI_ENABLED = True
     AI_PROVIDER = "groq"
-    AI_MODEL = "llama-3.3-70b-versatile"  # نموذج خفيف وسريع جداً وممتاز للعربية
+    AI_MODEL = "llama-4-scout-17b-16e-instruct"  # نموذج خفيف وسريع جداً وممتاز للعربية
 
     # إعدادات الردود
     AUTO_REPLY_ENABLED = True
