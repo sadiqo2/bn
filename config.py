@@ -12,7 +12,7 @@ class Config:
     GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
     GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
     OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
-    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "") 
+    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "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") 
 
     # إعدادات البوت
     BOT_NAME = os.getenv("BOT_NAME", "🤖 SmartBot")
