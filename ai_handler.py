@@ -15,16 +15,10 @@ class AIHandler:
         if not Config.AI_ENABLED:
             return "⚠️ الذكاء الاصطناعي معطل حالياً من الإعدادات."
         try:
-            if self.provider == "gemini":
-                return await self._gemini_response(message, chat_history)
-            elif self.provider == "groq":
-                return await self._groq_response(message, chat_history)
-            elif self.provider == "openrouter":
-                return await self._openrouter_response(message, chat_history)
-            elif self.provider == "huggingface":
+            if self.provider == "huggingface":
                 return await self._huggingface_response(message, chat_history)
             else:
-                return "⚠️ مزود الذكاء الاصطناعي غير محدد"
+                return "⚠️ مزود الذكاء الاصطناعي الحالي غير مدعوم، تم حصر البوت على Hugging Face."
         except Exception as e:
             return f"❌ خطأ برمجي في الاتصال: {str(e)[:100]}"
 
@@ -56,69 +50,3 @@ class AIHandler:
                 
                 error_msg = data.get("error", {}).get("message", str(data))
                 return f"⚠️ خطأ من سيرفر Hugging Face:\n{error_msg}"
-
-    async def _gemini_response(self, message: str, chat_history: List[dict] = None) -> str:
-        url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
-        
-        contents = []
-        if chat_history:
-            for msg in chat_history:
-                role = "model" if msg["role"] == "assistant" else "user"
-                contents.append({"role": role, "parts": [{"text": msg["content"]}]})
-        
-        contents.append({"role": "user", "parts": [{"text": message}]})
-        
-        payload = {
-            "system_instruction": {"parts": [{"text": self.system_prompt}]},
-            "contents": contents,
-            "generationConfig": {"temperature": 0.7, "maxOutputTokens": 2048, "topP": 0.9}
-        }
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, params={"key": Config.GEMINI_API_KEY}, json=payload, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                data = await response.json()
-                if "candidates" in data and data["candidates"]:
-                    return data["candidates"][0]["content"]["parts"][0]["text"]
-                
-                error_msg = data.get("error", {}).get("message", str(data))
-                return f"⚠️ خطأ من سيرفر Gemini:\n{error_msg}"
-
-    async def _groq_response(self, message: str, chat_history: List[dict] = None) -> str:
-        url = "https://api.groq.com/openai/v1/chat/completions"
-        messages = [{"role": "system", "content": self.system_prompt}]
-        if chat_history:
-            for msg in chat_history:
-                messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": message})
-        
-        payload = {"model": "llama-3.1-8b-instant", "messages": messages, "temperature": 0.7, "max_tokens": 2048}
-        headers = {"Authorization": f"Bearer {Config.GROQ_API_KEY}", "Content-Type": "application/json"}
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                data = await response.json()
-                if "choices" in data and data["choices"]:
-                    return data["choices"][0]["message"]["content"]
-                
-                error_msg = data.get("error", {}).get("message", str(data))
-                return f"⚠️ خطأ من سيرفر Groq:\n{error_msg}"
-
-    async def _openrouter_response(self, message: str, chat_history: List[dict] = None) -> str:
-        url = "https://openrouter.ai/api/v1/chat/completions"
-        messages = [{"role": "system", "content": self.system_prompt}]
-        if chat_history:
-            for msg in chat_history:
-                messages.append({"role": msg["role"], "content": msg["content"]})
-        messages.append({"role": "user", "content": message})
-        
-        payload = {"model": self.model, "messages": messages, "temperature": 0.7, "max_tokens": 2048}
-        headers = {"Authorization": f"Bearer {Config.OPENROUTER_API_KEY}", "Content-Type": "application/json"}
-        
-        async with aiohttp.ClientSession() as session:
-            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
-                data = await response.json()
-                if "choices" in data and data["choices"]:
-                    return data["choices"][0]["message"]["content"]
-                
-                error_msg = data.get("error", {}).get("message", str(data))
-                return f"⚠️ خطأ من سيرفر OpenRouter:\n{error_msg}"
