@@ -21,10 +21,41 @@ class AIHandler:
                 return await self._groq_response(message, chat_history)
             elif self.provider == "openrouter":
                 return await self._openrouter_response(message, chat_history)
+            elif self.provider == "huggingface":
+                return await self._huggingface_response(message, chat_history)
             else:
                 return "⚠️ مزود الذكاء الاصطناعي غير محدد"
         except Exception as e:
             return f"❌ خطأ برمجي في الاتصال: {str(e)[:100]}"
+
+    async def _huggingface_response(self, message: str, chat_history: List[dict] = None) -> str:
+        url = "https://api-inference.huggingface.co/v1/chat/completions"
+        
+        messages = [{"role": "system", "content": self.system_prompt}]
+        if chat_history:
+            for msg in chat_history:
+                messages.append({"role": msg["role"], "content": msg["content"]})
+        messages.append({"role": "user", "content": message})
+        
+        payload = {
+            "model": self.model, 
+            "messages": messages, 
+            "temperature": 0.7, 
+            "max_tokens": 2048
+        }
+        headers = {
+            "Authorization": f"Bearer {Config.HUGGINGFACE_API_KEY}", 
+            "Content-Type": "application/json"
+        }
+        
+        async with aiohttp.ClientSession() as session:
+            async with session.post(url, json=payload, headers=headers, timeout=aiohttp.ClientTimeout(total=30)) as response:
+                data = await response.json()
+                if "choices" in data and data["choices"]:
+                    return data["choices"][0]["message"]["content"]
+                
+                error_msg = data.get("error", {}).get("message", str(data))
+                return f"⚠️ خطأ من سيرفر Hugging Face:\n{error_msg}"
 
     async def _gemini_response(self, message: str, chat_history: List[dict] = None) -> str:
         url = f"https://generativelanguage.googleapis.com/v1beta/models/{self.model}:generateContent"
@@ -49,7 +80,6 @@ class AIHandler:
                 if "candidates" in data and data["candidates"]:
                     return data["candidates"][0]["content"]["parts"][0]["text"]
                 
-                # جلب الخطأ الحقيقي من كوكل
                 error_msg = data.get("error", {}).get("message", str(data))
                 return f"⚠️ خطأ من سيرفر Gemini:\n{error_msg}"
 
@@ -61,7 +91,6 @@ class AIHandler:
                 messages.append({"role": msg["role"], "content": msg["content"]})
         messages.append({"role": "user", "content": message})
         
-        # استخدام النموذج الأحدث والمضمون من Groq
         payload = {"model": "llama-3.1-8b-instant", "messages": messages, "temperature": 0.7, "max_tokens": 2048}
         headers = {"Authorization": f"Bearer {Config.GROQ_API_KEY}", "Content-Type": "application/json"}
         
@@ -71,7 +100,6 @@ class AIHandler:
                 if "choices" in data and data["choices"]:
                     return data["choices"][0]["message"]["content"]
                 
-                # جلب الخطأ الحقيقي من جروق حتى نعرف وين المشكلة
                 error_msg = data.get("error", {}).get("message", str(data))
                 return f"⚠️ خطأ من سيرفر Groq:\n{error_msg}"
 
@@ -92,6 +120,5 @@ class AIHandler:
                 if "choices" in data and data["choices"]:
                     return data["choices"][0]["message"]["content"]
                 
-                # جلب الخطأ الحقيقي من أوبن راوتر
                 error_msg = data.get("error", {}).get("message", str(data))
                 return f"⚠️ خطأ من سيرفر OpenRouter:\n{error_msg}"
