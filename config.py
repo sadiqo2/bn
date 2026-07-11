@@ -9,24 +9,21 @@ class Config:
     API_HASH = os.getenv("API_HASH", "2e6bf629432f1dd91a06d77342482218")
 
     # AI API Keys
-    GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-    GROQ_API_KEY = os.getenv("GROQ_API_KEY", "")
-    OPENROUTER_API_KEY = os.getenv("OPENROUTER_API_KEY", "")
     HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "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") 
 
     # إعدادات البوت
     BOT_NAME = os.getenv("BOT_NAME", "🤖 SmartBot")
     ADMIN_ID = int(os.getenv("ADMIN_ID", 8892756167))
 
-    # إعدادات الذكاء الاصطناعي
+    # إعدادات الذكاء الاصطناعي (مثبت على Hugging Face فقط)
     AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
-    AI_PROVIDER = os.getenv("AI_PROVIDER", "huggingface")
+    AI_PROVIDER = "huggingface"
     AI_MODEL = os.getenv("AI_MODEL", "Qwen/Qwen2.5-7B-Instruct")
 
     # إعدادات الردود
     AUTO_REPLY_ENABLED = True
     REPLY_DELAY = 2
-    MAX_MESSAGE_LENGTH = 4096
+    MAX_MESSAGE_LENGTH = 40Net96
 
     # إعدادات الحماية
     RATE_LIMIT = 20
