@@ -1,24 +1,21 @@
 import os
-from dotenv import load_dotenv
-
-load_dotenv()
 
 class Config:
     # Telegram API
-    API_ID = int(os.getenv("API_ID", 29528386))
-    API_HASH = os.getenv("API_HASH", "2e6bf629432f1dd91a06d77342482218")
+    API_ID = 29528386
+    API_HASH = "2e6bf629432f1dd91a06d77342482218"
 
-    # AI API Keys
-    HUGGINGFACE_API_KEY = os.getenv("HUGGINGFACE_API_KEY", "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") 
+    # AI API Keys (ضع مفتاح جروق هنا)
+    GROQ_API_KEY = "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"
 
     # إعدادات البوت
-    BOT_NAME = os.getenv("BOT_NAME", "🤖 SmartBot")
-    ADMIN_ID = int(os.getenv("ADMIN_ID", 8892756167))
+    BOT_NAME = "🤖 SmartBot"
+    ADMIN_ID = 8892756167
 
-    # إعدادات الذكاء الاصطناعي (مثبت على Hugging Face فقط)
-    AI_ENABLED = os.getenv("AI_ENABLED", "true").lower() == "true"
-    AI_PROVIDER = "huggingface"
-    AI_MODEL = os.getenv("AI_MODEL", "Qwen/Qwen2.5-7B-Instruct")
+    # إعدادات الذكاء الاصطناعي (مثبت على Groq الخفيف والسريع)
+    AI_ENABLED = True
+    AI_PROVIDER = "groq"
+    AI_MODEL = "llama3-8b-8192"  # نموذج خفيف وسريع جداً وممتاز للعربية
 
     # إعدادات الردود
     AUTO_REPLY_ENABLED = True
